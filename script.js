@@ -23,25 +23,68 @@ window.onload = function() {
 
 function loadPlayer() {
     const playerSprite = new Sprite({
-        frameHeight: 80,
-        frameWidth: 62,
+        frameHeight: 140,
+        frameWidth: 101,
         animations: {
-            DOWN: { x: 1, y: 0, frameCount: 3 },
-            RIGHT: { x: 188, y: 0, frameCount: 3 },
-            UP: { x: 2, y: 84, frameCount: 3 },
-            EXPLOSION: { x: 0, y: 380, frameCount: 6 },
-            // TODO: LEFT
+            DOWN: { x: 0, y: 0, frameCount: 3 },
+            RIGHT: { x: 303, y: 0, frameCount: 3 },
+            LEFT: { x: 303, y: 140, frameCount: 3 },
+            UP: { x: 0, y: 280, frameCount: 3 },
+            EXPLOSION: { x: 0, y: 560, frameCount: 6 },
+            STAY: { x: 0, y: 0, frameCount: 1 },
         },
         timeout: 100,
         image: "images/bomberman.png"
     });
     player = {
         sprite: playerSprite,
-        x: 66,
-        y: 66,
-        width: 48,
-        height: 60,
-        state: 'EXPLOSION'
+        x: 65,
+        y: 65,
+        width: 45,
+        height: 55,
+        state: 'STAY',
+        speed: 5,
+        right: () => {
+            player.x += player.speed;
+            if (player.checkCollision(player.x + player.width, player.y)) { // если новые координаты - стена
+                player.x -= player.speed; // то выполняем движение в противоход, запрещая туда идти
+            }
+            player.state = 'RIGHT';
+        },
+        left: () => {
+            player.x -= player.speed;
+            if (player.checkCollision(player.x, player.y)) { // если новые координаты - стена
+                player.x += player.speed; // то выполняем движение в противоход, запрещая туда идти
+            }
+            player.state = 'LEFT';
+        },
+        up: () => {
+            player.y -= player.speed;
+            if (player.checkCollision(player.x, player.y)) { // если новые координаты - стена
+                player.y += player.speed; // то выполняем движение в противоход, запрещая туда идти
+            }
+            player.state = "UP";
+        },
+        down: () => {
+            player.y += player.speed;
+            if (player.checkCollision(player.x, player.y + player.height)) { // если новые координаты - стена
+                player.y -= player.speed; // то выполняем движение в противоход, запрещая туда идти
+            }
+            player.state = "DOWN";
+        },
+        checkCollision: (x, y) => {
+            let cell = player.getCellByCoors(x, y);
+            if (level[cell[0]][cell[1]] > 0) { // внимательно тут с []
+                return true;
+            }
+            return false;
+        },
+        getCellByCoors: (x, y) => {
+            let cellSize = height / rows;
+            let j = Math.trunc(y / cellSize);// ряд
+            let i = Math.trunc(x / cellSize); // столбец
+            return [j, i];
+        }
     }
 }
 
@@ -65,6 +108,7 @@ function renderPlayer() {
     const frame = sprite.getFrame(state);
     game.drawImage(frame.image, frame.x, frame.y, frame.w, 
             frame.h, player.x, player.y, player.width, player.height);
+    // game.fillRect(player.x, player.y, player.width, player.height);
 }
 
 function renderWorld() {
@@ -87,3 +131,26 @@ function renderWorld() {
         }
     }
 }
+
+window.addEventListener("keydown", onKeyDown, false);
+
+
+function onKeyDown(event) {
+    var keyCode = event.keyCode;
+    switch (keyCode) {
+        case 68:
+            player.right();
+            break;
+        case 83:
+            player.down();
+            break;
+        case 65:
+            player.left();
+            break;
+        case 87:
+            player.up();
+            break;
+    }
+}
+
+window.addEventListener("keyup", () =>  player.state = "STAY");
