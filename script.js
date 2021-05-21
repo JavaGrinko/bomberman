@@ -3,6 +3,7 @@ const height = 600;
 const rows = 10; // рядов
 const columns = 15; // столбцов
 let player;
+let bot;
 let game;
 
 const GRASS = new Image();
@@ -18,64 +19,124 @@ window.onload = function() {
     console.log("Скрипты подключены");
     createCanvas();
     loadPlayer();
+    loadBot();
     requestAnimationFrame(render);
 }
 
-function loadPlayer() {
-    const playerSprite = new Sprite({
-        frameHeight: 140,
-        frameWidth: 101,
+function loadBot() {
+    const botSprite = new Sprite({
+        frameWidth: 32,
+        frameHeight: 42,
         animations: {
             DOWN: { x: 0, y: 0, frameCount: 3 },
-            RIGHT: { x: 303, y: 0, frameCount: 3 },
-            LEFT: { x: 303, y: 140, frameCount: 3 },
-            UP: { x: 0, y: 280, frameCount: 3 },
+            RIGHT: { x: 0, y: 120, frameCount: 3 },
+            LEFT: { x: 0, y: 40, frameCount: 3 },
+            UP: { x: 0, y: 80, frameCount: 3 },
             EXPLOSION: { x: 0, y: 560, frameCount: 6 },
             STAY: { x: 0, y: 0, frameCount: 1 },
         },
         timeout: 100,
-        image: "images/bomberman.png"
+        image: "images/bomber.gif"
+    });
+    // клонируем плеера
+    bot = {...player};
+    bot.sprite = botSprite;
+    bot.x = 600;
+    bot.y = 400;
+    bot.direction = "up"; // up, down, left, right
+    bot.autopilot = () => {
+        switch (bot.direction) {
+            case "up":
+                bot.up(bot);
+                break;
+            case "down":
+                bot.down(bot);
+                break;
+            case "left":
+                bot.left(bot);
+                break;
+            case "right":
+                bot.right(bot);
+                break;
+        }
+    }
+    bot.onCollision = () => {
+        bot.changeDirection();
+    }
+    bot.changeDirection = () => {
+        let dirs = ["up", "down", "left", "right"];
+        bot.direction = dirs[Math.round(Math.random() * 3)];
+    }
+    
+}
+
+function loadPlayer() {
+    const playerSprite = new Sprite({
+        frameWidth: 32,
+        frameHeight: 42,
+        animations: {
+            DOWN: { x: 0, y: 0, frameCount: 3 },
+            RIGHT: { x: 0, y: 120, frameCount: 3 },
+            LEFT: { x: 0, y: 40, frameCount: 3 },
+            UP: { x: 0, y: 80, frameCount: 3 },
+            EXPLOSION: { x: 0, y: 560, frameCount: 6 },
+            STAY: { x: 0, y: 0, frameCount: 1 },
+        },
+        timeout: 100,
+        image: "images/bomber.gif"
     });
     player = {
         sprite: playerSprite,
         x: 65,
         y: 65,
-        width: 45,
-        height: 55,
+        width: 42,
+        height: 52,
         state: 'STAY',
         speed: 5,
-        right: () => {
-            player.x += player.speed;
-            if (player.checkCollision(player.x + player.width, player.y)) { // если новые координаты - стена
-                player.x -= player.speed; // то выполняем движение в противоход, запрещая туда идти
+        right: (me) => {
+            me.x += me.speed;
+            if (me.checkCollision(me)) { // проверяем, задел ли один из углов бомбера стену
+                me.x -= me.speed; // то выполняем движение в противоход, запрещая туда идти
             }
-            player.state = 'RIGHT';
+            me.state = 'RIGHT';
         },
-        left: () => {
-            player.x -= player.speed;
-            if (player.checkCollision(player.x, player.y)) { // если новые координаты - стена
-                player.x += player.speed; // то выполняем движение в противоход, запрещая туда идти
+        left: (me) => {
+            me.x -= me.speed;
+            if (me.checkCollision(me)) { // проверяем, задел ли один из углов бомбера стену
+                me.x += me.speed; // то выполняем движение в противоход, запрещая туда идти
             }
-            player.state = 'LEFT';
+            me.state = 'LEFT';
         },
-        up: () => {
-            player.y -= player.speed;
-            if (player.checkCollision(player.x, player.y)) { // если новые координаты - стена
-                player.y += player.speed; // то выполняем движение в противоход, запрещая туда идти
+        up: (me) => {
+            me.y -= me.speed;
+            if (me.checkCollision(me)) { // проверяем, задел ли один из углов бомбера стену
+                me.y += me.speed; // то выполняем движение в противоход, запрещая туда идти
             }
-            player.state = "UP";
+            me.state = "UP";
         },
-        down: () => {
-            player.y += player.speed;
-            if (player.checkCollision(player.x, player.y + player.height)) { // если новые координаты - стена
-                player.y -= player.speed; // то выполняем движение в противоход, запрещая туда идти
+        down: (me) => {
+            me.y += me.speed;
+            if (me.checkCollision(me)) { // проверяем, задел ли один из углов бомбера стену
+                me.y -= me.speed; // то выполняем движение в противоход, запрещая туда идти
             }
-            player.state = "DOWN";
+            me.state = "DOWN";
         },
-        checkCollision: (x, y) => {
-            let cell = player.getCellByCoors(x, y);
-            if (level[cell[0]][cell[1]] > 0) { // внимательно тут с []
-                return true;
+        checkCollision: (me) => {
+            let {x, y, width, height} = me;
+            let points = [
+                [x, y],
+                [x + width, y],
+                [x, y + height],
+                [x + width, y + height]
+            ];
+            for (let p of points) {
+                let cell = me.getCellByCoors(p[0], p[1]);
+                if (level[cell[0]][cell[1]] > 0) { // внимательно тут с []
+                    if (me.onCollision) {
+                        me.onCollision();
+                    }
+                    return true;
+                }
             }
             return false;
         },
@@ -100,14 +161,16 @@ function createCanvas() {
 function render() {
     requestAnimationFrame(render);
     renderWorld();
-    renderPlayer();
+    renderAnyone(player);
+    renderAnyone(bot);
+    bot.autopilot();
 }
 
-function renderPlayer() {
-    const { sprite, state } = player;
+function renderAnyone(anyone) {
+    const { sprite, state } = anyone;
     const frame = sprite.getFrame(state);
     game.drawImage(frame.image, frame.x, frame.y, frame.w, 
-            frame.h, player.x, player.y, player.width, player.height);
+            frame.h, anyone.x, anyone.y, anyone.width, anyone.height);
     // game.fillRect(player.x, player.y, player.width, player.height);
 }
 
@@ -139,16 +202,16 @@ function onKeyDown(event) {
     var keyCode = event.keyCode;
     switch (keyCode) {
         case 68:
-            player.right();
+            player.right(player);
             break;
         case 83:
-            player.down();
+            player.down(player);
             break;
         case 65:
-            player.left();
+            player.left(player);
             break;
         case 87:
-            player.up();
+            player.up(player);
             break;
     }
 }
