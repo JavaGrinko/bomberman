@@ -5,6 +5,7 @@ const columns = 15; // столбцов
 let player;
 let bot;
 let game;
+let bombs = [];
 
 const GRASS = new Image();
 GRASS.src = "images/grass.png";
@@ -14,6 +15,9 @@ WALL.src = "images/wall.png";
 
 const BRICKS = new Image();
 BRICKS.src = "images/bricks.png";
+
+const EXPLOSION = new Image();
+EXPLOSION.src = "images/explosion.png"
 
 window.onload = function() {
     console.log("Скрипты подключены");
@@ -142,9 +146,20 @@ function loadPlayer() {
         },
         getCellByCoors: (x, y) => {
             let cellSize = height / rows;
-            let j = Math.trunc(y / cellSize);// ряд
+            let j = Math.trunc(y / cellSize); // ряд
             let i = Math.trunc(x / cellSize); // столбец
             return [j, i];
+        },
+        putBomb: (me) => {
+            let {x, y, width, height} = me;
+            let centerX = x + width / 2;
+            let centerY = y + height / 2;
+            let coors = me.getCellByCoors(centerX, centerY);
+            bombs.push({
+                j: coors[0],  // ряд
+                i: coors[1],  // столбец
+                start: new Date()
+            });
         }
     }
 }
@@ -163,6 +178,7 @@ function render() {
     renderWorld();
     renderAnyone(player);
     renderAnyone(bot);
+    renderBombs();
     bot.autopilot();
 }
 
@@ -172,6 +188,34 @@ function renderAnyone(anyone) {
     game.drawImage(frame.image, frame.x, frame.y, frame.w, 
             frame.h, anyone.x, anyone.y, anyone.width, anyone.height);
     // game.fillRect(player.x, player.y, player.width, player.height);
+}
+
+function renderBombs() {
+    let cellSize = height / rows;
+    for (let bomb of bombs) {
+        let { i, j, start } = bomb;
+        let x = i * cellSize;
+        let y = j * cellSize;
+        let littleBombSize = 18;
+        let bigBombSize = 115;
+        let timePassed = new Date() - start; // сколько времени от установки прошло
+        if (timePassed < 500) {
+            game.drawImage(EXPLOSION, 4, 6, littleBombSize, littleBombSize, x, y, cellSize, cellSize);
+        } else if (timePassed < 1000) {
+            game.drawImage(EXPLOSION, 22, 6, littleBombSize, littleBombSize, x, y, cellSize, cellSize);
+        } else if (timePassed < 4500) {
+            game.drawImage(EXPLOSION, 40, 6, littleBombSize, littleBombSize, x, y, cellSize, cellSize);
+        } else if (timePassed < 5000) {
+            game.drawImage(EXPLOSION, 80, 5, bigBombSize, bigBombSize, x - cellSize, y - cellSize, cellSize * 3, cellSize * 3);
+        } else if (timePassed < 5500) {
+            game.drawImage(EXPLOSION, 195, 5, bigBombSize, bigBombSize, x - cellSize, y - cellSize, cellSize * 3, cellSize * 3);
+        } else if (timePassed < 6000) {
+            game.drawImage(EXPLOSION, 310, 5, bigBombSize, bigBombSize, x - cellSize, y - cellSize, cellSize * 3, cellSize * 3);
+        } else {
+            bomb.isDead = true;
+        }
+    }
+    bombs = bombs.filter(b => !b.isDead);
 }
 
 function renderWorld() {
@@ -199,19 +243,23 @@ window.addEventListener("keydown", onKeyDown, false);
 
 
 function onKeyDown(event) {
-    var keyCode = event.keyCode;
-    switch (keyCode) {
-        case 68:
+    var key = event.key;
+    
+    switch (key) {
+        case "d":
             player.right(player);
             break;
-        case 83:
+        case "s":
             player.down(player);
             break;
-        case 65:
+        case "a":
             player.left(player);
             break;
-        case 87:
+        case "w":
             player.up(player);
+            break;
+        case " ":
+            player.putBomb(player);
             break;
     }
 }
