@@ -47,6 +47,7 @@ function loadBot() {
     bot.sprite = botSprite;
     bot.x = 600;
     bot.y = 400;
+    bot.speed = 1;
     bot.direction = "up"; // up, down, left, right
     bot.autopilot = () => {
         switch (bot.direction) {
@@ -96,7 +97,7 @@ function loadPlayer() {
         width: 42,
         height: 52,
         state: 'STAY',
-        speed: 5,
+        speed: 10,
         right: (me) => {
             me.x += me.speed;
             if (me.checkCollision(me)) { // проверяем, задел ли один из углов бомбера стену
@@ -156,8 +157,8 @@ function loadPlayer() {
             let centerY = y + height / 2;
             let coors = me.getCellByCoors(centerX, centerY);
             bombs.push({
-                j: coors[0],  // ряд
-                i: coors[1],  // столбец
+                row: coors[0],  // ряд
+                column: coors[1],  // столбец
                 start: new Date()
             });
         }
@@ -183,6 +184,7 @@ function render() {
 }
 
 function renderAnyone(anyone) {
+    if (anyone.isDead) return;
     const { sprite, state } = anyone;
     const frame = sprite.getFrame(state);
     game.drawImage(frame.image, frame.x, frame.y, frame.w, 
@@ -193,9 +195,9 @@ function renderAnyone(anyone) {
 function renderBombs() {
     let cellSize = height / rows;
     for (let bomb of bombs) {
-        let { i, j, start } = bomb;
-        let x = i * cellSize;
-        let y = j * cellSize;
+        let { column, row, start } = bomb;
+        let x = column * cellSize;
+        let y = row * cellSize;
         let littleBombSize = 18;
         let bigBombSize = 115;
         let timePassed = new Date() - start; // сколько времени от установки прошло
@@ -212,11 +214,31 @@ function renderBombs() {
         } else if (timePassed < 6000) {
             game.drawImage(EXPLOSION, 310, 5, bigBombSize, bigBombSize, x - cellSize, y - cellSize, cellSize * 3, cellSize * 3);
         } else {
+            explosion(bomb);
             bomb.isDead = true;
         }
     }
     bombs = bombs.filter(b => !b.isDead);
 }
+
+function explosion(bomb) {
+    let { column, row } = bomb;
+    for (let i = -1; i <= 1; i++) { // +- 1 ряд от бомбы
+        for (let j = -1; j <= 1; j++) { // +- 1 столбец от бомбы
+            if (Math.abs(i) + Math.abs(j) != 2) { // за исключением угловых блоков
+                if (level[row + i][column + j] == 2) { // если 2 - пробиваемая стена, то сносим
+                    level[row + i][column + j] = 0;
+                }
+                let coors = bot.getCellByCoors(bot.x, bot.y);
+                let r = coors[0]; // ряд
+                let c = coors[1]; // столбец
+                if (row + i === r && column + j === c) {
+                    bot.isDead = true;
+                }
+            }
+        }
+    }
+} 
 
 function renderWorld() {
     let cellSize = height / rows;
