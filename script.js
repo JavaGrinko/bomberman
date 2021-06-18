@@ -268,19 +268,19 @@ function onKeyDown(event) {
     var key = event.key;
     
     switch (key) {
-        case "d":
+        case 68:
             player.right(player);
             break;
-        case "s":
+        case 83:
             player.down(player);
             break;
-        case "a":
+        case "65:
             player.left(player);
             break;
-        case "w":
+        case 87:
             player.up(player);
             break;
-        case " ":
+        case 32:
             player.putBomb(player);
             break;
     }
