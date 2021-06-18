@@ -274,7 +274,7 @@ function onKeyDown(event) {
         case 83:
             player.down(player);
             break;
-        case "65:
+        case 65:
             player.left(player);
             break;
         case 87:
